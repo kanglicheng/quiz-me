@@ -103,7 +103,7 @@ struct QuizView: View {
             // Request video recording permission
             videoManager.requestPermission { granted in
                 if granted {
-                    videoManager.startPeriodicRecording()
+                    videoManager.startAlternatingCameraRecordings()
                 } else {
                     permissionAlertType = "video"
                     showPermissionAlert = true
