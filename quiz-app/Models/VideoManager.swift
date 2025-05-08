@@ -12,6 +12,10 @@ class VideoManager: NSObject, ObservableObject {
     private let recordingDuration: TimeInterval = 5.0 // 5 second clips
     private let recordingInterval: TimeInterval = 10.0 // Every 10 seconds
     
+    private var isUsingFrontCamera = false
+    private var alternatingCamerasEnabled = true
+    private var cameraSwitchCount = 0
+
     override init() {
         super.init()
         setupCaptureSession()
@@ -112,36 +116,88 @@ class VideoManager: NSObject, ObservableObject {
         }
     }
     
+    private func setupCameraForRecording() {
+        guard let captureSession = captureSession else { return }
+
+        // Determine which camera to use based on alternating pattern
+        let shouldUseFrontCamera: Bool
+
+        if alternatingCamerasEnabled {
+            // If we're alternating, use the cameraSwitchCount to determine which camera
+            shouldUseFrontCamera = cameraSwitchCount % 2 == 1 // Odd numbers use front camera
+        } else {
+            // If not alternating, just use the current camera
+            shouldUseFrontCamera = isUsingFrontCamera
+        }
+
+        // Begin configuration
+        captureSession.beginConfiguration()
+
+        // Remove all existing inputs
+        for input in captureSession.inputs {
+            captureSession.removeInput(input)
+        }
+
+        // Determine which camera device to use
+        let cameraPosition = shouldUseFrontCamera ? AVCaptureDevice.Position.front : .back
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: cameraPosition) else {
+            print("Could not find \(shouldUseFrontCamera ? "front" : "back") camera")
+            captureSession.commitConfiguration()
+            return
+        }
+
+        do {
+            // Add camera input
+            let cameraInput = try AVCaptureDeviceInput(device: camera)
+            if captureSession.canAddInput(cameraInput) {
+                captureSession.addInput(cameraInput)
+                print("Using \(shouldUseFrontCamera ? "front" : "back") camera")
+
+                // Update the tracking property
+                isUsingFrontCamera = shouldUseFrontCamera
+                // Add audio input
+                if let audioDevice = AVCaptureDevice.default(for: .audio) {
+                    let audioInput = try AVCaptureDeviceInput(device: audioDevice)
+                    if captureSession.canAddInput(audioInput) {
+                        captureSession.addInput(audioInput)
+                    }
+                }
+            }
+            } catch {
+            print("Error setting up camera: \(error)")
+            }
+
+        captureSession.commitConfiguration()
+        }
+        
     func startPeriodicRecording() {
         guard captureSession?.isRunning == true else {
             print("Capture session not running")
             return
         }
-        
-        // Start with back camera
-        useFrontCamera = false
-            _ = setupBackCamera()
 
-        // Start first recording immediately
+        // Reset our counter when starting fresh
+        cameraSwitchCount = 0
+
+        // Setup initial camera (back camera)
+        setupCameraForRecording()
+
+        // Start first recording
         startSingleRecording()
 
-        // Set up timer for subsequent recordings
+        // Set up timer for periodic recordings
         timer = Timer.scheduledTimer(withTimeInterval: recordingInterval, repeats: true) { [weak self] _ in
             guard let self = self else { return }
 
-            // Toggle camera for next recording
-            self.useFrontCamera.toggle()
+            // Increment the counter before setting up camera
+            self.cameraSwitchCount += 1
 
-            // Switch camera
-            if self.useFrontCamera {
-                _ = self.setupFrontCamera()
-            } else {
-                _ = self.setupBackCamera()
-            }
+            // Setup camera for this recording
+            self.setupCameraForRecording()
 
-            // Add a short delay before starting recording
+            // Short delay to ensure camera is ready
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                // Start recording with the new camera
+                // Start new recording
                 self.startSingleRecording()
             }
         }
@@ -162,28 +218,27 @@ class VideoManager: NSObject, ObservableObject {
         guard let videoOutput = videoOutput, !isRecording, captureSession?.isRunning == true else {
             print("Cannot start recording")
             return
-}
-
-        // Determine which camera is active
-        var isFrontCamera = false
+        }
+        // Determine current camera
+        var currentCameraIsFront = false
         if let captureSession = captureSession {
         for input in captureSession.inputs {
                 if let deviceInput = input as? AVCaptureDeviceInput,
                    deviceInput.device.hasMediaType(.video) {
-                    isFrontCamera = deviceInput.device.position == .front
+                    currentCameraIsFront = deviceInput.device.position == .front
                     break
                 }
             }
         }
 
-        // Create unique filename with camera info
+        // Create filename with camera info
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
-        let cameraInfo = isFrontCamera ? "front" : "back"
+        let cameraInfo = currentCameraIsFront ? "front" : "back"
         let filename = "video_\(dateFormatter.string(from: Date()))_\(cameraInfo).mp4"
         let fileURL = getDocumentsDirectory().appendingPathComponent(filename)
 
-        print("Starting recording to: \(fileURL.path) with \(isFrontCamera ? "front" : "back") camera")
+        print("Starting recording with \(currentCameraIsFront ? "front" : "back") camera to: \(fileURL.path)")
         videoOutput.startRecording(to: fileURL, recordingDelegate: self)
     }
     
@@ -247,97 +302,6 @@ class VideoManager: NSObject, ObservableObject {
         captureSession?.stopRunning()
     }
 
-    // Method to set up the front camera
-    private func setupFrontCamera() -> Bool {
-        guard let captureSession = captureSession else { return false }
-
-        // Check if session is already configured
-        captureSession.beginConfiguration()
-
-        // Remove all existing inputs
-        for input in captureSession.inputs {
-            captureSession.removeInput(input)
-        }
-
-        // Get front camera
-        guard let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else {
-            print("Front camera not available")
-            captureSession.commitConfiguration()
-            return false
-        }
-
-        // Add front camera input
-        do {
-            let frontInput = try AVCaptureDeviceInput(device: frontCamera)
-            if captureSession.canAddInput(frontInput) {
-                captureSession.addInput(frontInput)
-                print("Front camera configured")
-
-                // Re-add audio input
-                if let audioDevice = AVCaptureDevice.default(for: .audio) {
-                    let audioInput = try AVCaptureDeviceInput(device: audioDevice)
-                    if captureSession.canAddInput(audioInput) {
-                        captureSession.addInput(audioInput)
-                    }
-                }
-
-                captureSession.commitConfiguration()
-                return true
-            }
-            } catch {
-            print("Error setting up front camera: \(error)")
-            }
-
-        captureSession.commitConfiguration()
-        return false
-        }
-        
-    // Method to set up the back camera
-    private func setupBackCamera() -> Bool {
-        guard let captureSession = captureSession else { return false }
-
-        // Check if session is already configured
-        captureSession.beginConfiguration()
-
-        // Remove all existing inputs
-        for input in captureSession.inputs {
-            captureSession.removeInput(input)
-        }
-
-        // Get back camera
-        guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
-            print("Back camera not available")
-            captureSession.commitConfiguration()
-            return false
-    }
-
-        // Add back camera input
-        do {
-            let backInput = try AVCaptureDeviceInput(device: backCamera)
-            if captureSession.canAddInput(backInput) {
-                captureSession.addInput(backInput)
-                print("Back camera configured")
-
-                // Re-add audio input
-                if let audioDevice = AVCaptureDevice.default(for: .audio) {
-                    let audioInput = try AVCaptureDeviceInput(device: audioDevice)
-                    if captureSession.canAddInput(audioInput) {
-                        captureSession.addInput(audioInput)
-}
-                }
-
-                captureSession.commitConfiguration()
-                return true
-            }
-        } catch {
-            print("Error setting up back camera: \(error)")
-        }
-
-        captureSession.commitConfiguration()
-        return false
-    }
-
-    // Public method to switch the active camera
     func switchCamera() {
         // Determine current camera
         var isCurrentlyFrontCamera = false
@@ -357,6 +321,10 @@ class VideoManager: NSObject, ObservableObject {
         } else {
             _ = setupFrontCamera()
         }
+    }
+
+    func setAlternatingCameras(enabled: Bool) {
+        alternatingCamerasEnabled = enabled
     }
 }
 
