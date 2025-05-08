@@ -103,6 +103,8 @@ struct QuizView: View {
             // Request video recording permission
             videoManager.requestPermission { granted in
                 if granted {
+                    // Enable auto-switching between cameras
+                    videoManager.toggleAutoCameraSwitching(true)
                     videoManager.startPeriodicRecording()
                 } else {
                     permissionAlertType = "video"

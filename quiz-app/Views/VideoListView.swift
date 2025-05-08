@@ -34,11 +34,16 @@ struct VideoListView: View {
                                 }
                             }) {
                                 HStack {
-                                    Text(formatDate(from: url))
-                                        .font(.headline)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(formatDate(from: url))
+                                            .font(.headline)
                                     
+                                        // Show camera type based on filename
+                                        Text(url.lastPathComponent.contains("_front") ? "Front Camera" : "Back Camera")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
                                     Spacer()
-                                    
                                     if editMode == .inactive {
                                         Image(systemName: "play.circle.fill")
                                             .foregroundColor(.blue)
@@ -58,11 +63,11 @@ struct VideoListView: View {
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             EditButton()
-                        }
                     }
-                    .environment(\.editMode, $editMode)
                 }
-                
+                    .environment(\.editMode, $editMode)
+            }
+
                 if !videoManager.videoURLs.isEmpty {
                     Button(action: {
                         // Show confirmation alert
@@ -116,16 +121,13 @@ struct VideoListView: View {
         }
     }
     private func formatDate(from url: URL) -> String {
-        // Existing date formatting code
         let filename = url.lastPathComponent
         
         if filename.hasPrefix("video_") && filename.hasSuffix(".mp4") {
-            // Extract the date part
             let dateStart = filename.index(filename.startIndex, offsetBy: 6) // "video_" length
-            let dateEnd = filename.index(filename.endIndex, offsetBy: -4)    // ".mp4" length
-            
-            if dateStart < dateEnd {
-                let dateString = String(filename[dateStart..<dateEnd])
+
+            if let lastUnderscoreRange = filename.range(of: "_", options: .backwards, range: dateStart..<filename.index(filename.endIndex, offsetBy: -4)) {
+                let dateString = String(filename[dateStart..<lastUnderscoreRange.lowerBound])
                 
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyyMMdd_HHmmss"
@@ -140,5 +142,49 @@ struct VideoListView: View {
         }
         
         return filename
+    }
+
+func startPeriodicRecording() {
+    guard captureSession?.isRunning == true else {
+        print("Capture session not running")
+        return
+    }
+
+    // Start with back camera for first recording
+    if shouldAlternateCamera {
+        setCamera(front: false)
+    }
+
+    // Start first recording immediately
+    startSingleRecording()
+
+    // Set timer for periodic recordings
+    timer = Timer.scheduledTimer(withTimeInterval: recordingInterval, repeats: true) { [weak self] _ in
+        guard let self = self else { return }
+
+        // Switch camera before next recording if auto-switching is enabled
+        if self.shouldAlternateCamera {
+            self.toggleCamera()
+        }
+
+        // Start the recording with the current camera
+        self.startSingleRecording()
+    }
+}
+    private func startSingleRecording() {
+        guard let videoOutput = videoOutput, !isRecording, captureSession?.isRunning == true else {
+            print("Cannot start recording: videoOutput=\(videoOutput != nil), isRecording=\(isRecording), sessionRunning=\(captureSession?.isRunning == true)")
+            return
+        }
+
+        // Create unique filename - include camera position in filename
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let cameraTag = isUsingFrontCamera ? "front" : "back"
+        let filename = "video_\(dateFormatter.string(from: Date()))_\(cameraTag).mp4"
+        let fileURL = getDocumentsDirectory().appendingPathComponent(filename)
+
+        print("Starting recording to: \(fileURL.path) with \(isUsingFrontCamera ? "front" : "back") camera")
+        videoOutput.startRecording(to: fileURL, recordingDelegate: self)
     }
 }

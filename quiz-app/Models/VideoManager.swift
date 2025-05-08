@@ -5,6 +5,7 @@ import UIKit
 class VideoManager: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var videoURLs: [URL] = []
+    @Published var isUsingFrontCamera = false
     
     private var captureSession: AVCaptureSession?
     private var videoOutput: AVCaptureMovieFileOutput?
@@ -12,6 +13,9 @@ class VideoManager: NSObject, ObservableObject {
     private let recordingDuration: TimeInterval = 5.0 // 5 second clips
     private let recordingInterval: TimeInterval = 10.0 // Every 10 seconds
     
+    private var currentVideoInput: AVCaptureDeviceInput?
+    private var shouldAlternateCamera = true // Control whether to alternate cameras
+
     override init() {
         super.init()
         setupCaptureSession()
@@ -25,14 +29,11 @@ class VideoManager: NSObject, ObservableObject {
         #endif
         
         captureSession = AVCaptureSession()
-        captureSession?.sessionPreset = .medium // Use medium quality for better performance
-        
-        // Configure camera
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
-            print("Could not find back camera")
-            return
-        }
-        
+        captureSession?.sessionPreset = .medium
+
+        // Start with back camera
+        addCameraInput(position: .back)
+
         // Configure microphone
         guard let microphone = AVCaptureDevice.default(for: .audio) else {
             print("Could not find microphone")
@@ -40,13 +41,6 @@ class VideoManager: NSObject, ObservableObject {
         }
         
         do {
-            // Add camera input
-            let cameraInput = try AVCaptureDeviceInput(device: camera)
-            if captureSession!.canAddInput(cameraInput) {
-                captureSession!.addInput(cameraInput)
-                print("Added camera input")
-            }
-            
             // Add microphone input
             let micInput = try AVCaptureDeviceInput(device: microphone)
             if captureSession!.canAddInput(micInput) {
@@ -56,8 +50,6 @@ class VideoManager: NSObject, ObservableObject {
             
             // Configure video output
             videoOutput = AVCaptureMovieFileOutput()
-            
-            // Limit max recording duration
             videoOutput?.maxRecordedDuration = CMTime(seconds: recordingDuration, preferredTimescale: 30)
             
             if let videoOutput = videoOutput, captureSession!.canAddOutput(videoOutput) {
@@ -118,12 +110,25 @@ class VideoManager: NSObject, ObservableObject {
             return
         }
         
+        // Start with back camera for first recording
+        if shouldAlternateCamera {
+            setCamera(front: false)
+        }
+
         // Start first recording immediately
         startSingleRecording()
         
         // Set timer for periodic recordings
         timer = Timer.scheduledTimer(withTimeInterval: recordingInterval, repeats: true) { [weak self] _ in
-            self?.startSingleRecording()
+            guard let self = self else { return }
+
+            // Switch camera before next recording if auto-switching is enabled
+            if self.shouldAlternateCamera {
+                self.toggleCamera()
+            }
+
+            // Start the recording with the current camera
+            self.startSingleRecording()
         }
     }
     
@@ -144,13 +149,14 @@ class VideoManager: NSObject, ObservableObject {
             return
         }
         
-        // Create unique filename
+        // Create unique filename - include camera position in filename
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
-        let filename = "video_\(dateFormatter.string(from: Date())).mp4"
+        let cameraTag = isUsingFrontCamera ? "front" : "back"
+        let filename = "video_\(dateFormatter.string(from: Date()))_\(cameraTag).mp4"
         let fileURL = getDocumentsDirectory().appendingPathComponent(filename)
         
-        print("Starting recording to: \(fileURL.path)")
+        print("Starting recording to: \(fileURL.path) with \(isUsingFrontCamera ? "front" : "back") camera")
         videoOutput.startRecording(to: fileURL, recordingDelegate: self)
     }
     
@@ -208,6 +214,56 @@ class VideoManager: NSObject, ObservableObject {
         print("All videos deleted")
     }
     
+    private func addCameraInput(position: AVCaptureDevice.Position) {
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
+            print("Could not find \(position == .front ? "front" : "back") camera")
+            return
+        }
+
+        do {
+            // Create new input
+            let newInput = try AVCaptureDeviceInput(device: camera)
+
+            // Begin configuration
+            captureSession?.beginConfiguration()
+
+            // Remove existing camera input if any
+            if let currentInput = currentVideoInput {
+                captureSession?.removeInput(currentInput)
+            }
+
+            // Add the new input
+            if captureSession!.canAddInput(newInput) {
+                captureSession!.addInput(newInput)
+                currentVideoInput = newInput
+                isUsingFrontCamera = (position == .front)
+                print("Switched to \(position == .front ? "front" : "back") camera")
+            }
+
+            // Commit configuration
+            captureSession?.commitConfiguration()
+
+        } catch {
+            print("Error adding camera input: \(error)")
+        }
+    }
+
+    func toggleCamera() {
+        let newPosition: AVCaptureDevice.Position = isUsingFrontCamera ? .back : .front
+        addCameraInput(position: newPosition)
+    }
+
+    func setCamera(front: Bool) {
+        let newPosition: AVCaptureDevice.Position = front ? .front : .back
+        if isUsingFrontCamera != front {
+            addCameraInput(position: newPosition)
+        }
+    }
+
+    func toggleAutoCameraSwitching(_ enabled: Bool) {
+        shouldAlternateCamera = enabled
+    }
+
     deinit {
         stopPeriodicRecording()
         captureSession?.stopRunning()
