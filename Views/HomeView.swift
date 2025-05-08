@@ -2,9 +2,13 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var quizManager = QuizManager()
-    @StateObject private var screenshotManager = ScreenshotManager()
+    @EnvironmentObject var screenshotManager: ScreenshotManager
+    @EnvironmentObject var audioRecorderManager: AudioRecorderManager
+    @EnvironmentObject var motionManager: MotionManager
     @State private var navigateToQuiz = false
     @State private var showScreenshot = false
+    @State private var showRecordings = false
+    @State private var showPrivacyInfo = false
     
     var body: some View {
         NavigationStack {
@@ -28,9 +32,22 @@ struct HomeView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                 
-                Spacer()
+                HStack {
+                    Image(systemName: "camera.fill")
+                        .foregroundColor(.green)
+                    Text("Automatic screenshots")
                 
-                VStack(spacing: 20) {
+                    Spacer()
+
+                    Image(systemName: "mic.fill")
+                        .foregroundColor(.red)
+                    Text("Audio recording")
+                }
+                .font(.subheadline)
+                .padding(.horizontal, 50)
+                Spacer()
+
+                VStack(spacing: 16) {
                     Button(action: {
                         quizManager.restartQuiz()
                         navigateToQuiz = true
@@ -46,11 +63,10 @@ struct HomeView: View {
                     }
 
                     Button(action: {
-                        // Load screenshot before showing the view
                         screenshotManager.loadLatestScreenshot()
                         showScreenshot = true
                     }) {
-                        Text("View Screenshot")
+                        Text("View Latest Screenshot")
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -59,6 +75,28 @@ struct HomeView: View {
                             .background(Color.green)
                             .cornerRadius(12)
         }
+
+                    Button(action: {
+                        showRecordings = true
+                    }) {
+                        Text("Audio Recordings")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange)
+                            .cornerRadius(12)
+    }
+
+                    Button(action: {
+                        showPrivacyInfo = true
+                    }) {
+                        Label("Privacy Information", systemImage: "info.circle")
+                            .font(.headline)
+                            .foregroundColor(.blue)
+}
+                    .padding(.top, 8)
     }
                 .padding(.horizontal, 40)
 
@@ -68,13 +106,20 @@ struct HomeView: View {
             .navigationDestination(isPresented: $navigateToQuiz) {
                 QuizView()
                     .environmentObject(quizManager)
-                    .environmentObject(screenshotManager)
+            .environmentObject(screenshotManager)
+            .environmentObject(audioRecorderManager)
+            .environmentObject(motionManager)
     }
             .navigationDestination(isPresented: $showScreenshot) {
                 ScreenshotView()
-                    .environmentObject(screenshotManager)
 }
-}
+            .navigationDestination(isPresented: $showRecordings) {
+                RecordingsView()
+            }
+            .sheet(isPresented: $showPrivacyInfo) {
+                PrivacyInfoView()
+            }
+        }
         .onAppear {
             // Load any existing screenshot when app starts
             screenshotManager.loadLatestScreenshot()
@@ -82,8 +127,89 @@ struct HomeView: View {
     }
 }
 
+// A new view to explain the app's privacy features
+struct PrivacyInfoView: View {
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Group {
+                        Text("Privacy Information")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .padding(.bottom, 5)
+
+                        Text("This app captures data during your quiz session to enhance your experience. Here's what you should know:")
+                            .font(.body)
+                    }
+
+                    Divider()
+
+                    Group {
+                        Text("Automatic Screenshots")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("• Screenshots are taken every 15 seconds while the quiz is active")
+                        Text("• A subtle flash effect indicates when a screenshot is captured")
+                        Text("• Screenshots are stored only within the app")
+                        Text("• Screenshots pause when the device is lying flat")
+                    }
+
+                    Divider()
+
+                    Group {
+                        Text("Audio Recording")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("• 5-second audio clips are recorded every 30 seconds")
+                        Text("• A red indicator appears in the navigation bar during recording")
+                        Text("• Microphone permission is required and can be revoked in Settings")
+                        Text("• Recordings are stored only within the app")
+                    }
+
+                    Divider()
+
+                    Group {
+                        Text("Device Motion")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("• The app detects when your device is lying flat")
+                        Text("• Quiz and recordings pause when the device is flat")
+                        Text("• No motion data is stored or transmitted")
+                    }
+
+                    Text("All data captured is stored locally on your device and is not shared with third parties.")
+                        .font(.headline)
+                        .padding(.top, 20)
+                }
+                .padding()
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
+        let screenshotManager = ScreenshotManager()
+        let audioRecorderManager = AudioRecorderManager()
+        let motionManager = MotionManager()
+
         HomeView()
+            .environmentObject(screenshotManager)
+            .environmentObject(audioRecorderManager)
+            .environmentObject(motionManager)
     }
 }

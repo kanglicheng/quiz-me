@@ -2,23 +2,34 @@ import SwiftUI
 
 struct QuizView: View {
     @EnvironmentObject var quizManager: QuizManager
+    @EnvironmentObject var screenshotManager: ScreenshotManager
+    @EnvironmentObject var audioRecorderManager: AudioRecorderManager
+    @EnvironmentObject var motionManager: MotionManager
     @Environment(\.presentationMode) var presentationMode
+    
     @State private var selectedAnswerIndex: Int? = nil
     @State private var showResult = false
     @State private var isCorrect = false
-    @StateObject private var motionManager = MotionManager()
-    @EnvironmentObject var screenshotManager: ScreenshotManager
-    
+    @State private var recordingPermissionGranted = false
+    @State private var showPermissionAlert = false
+    @State private var currentQuestion: Question?
+
     // Select a random question from the quiz manager
     private var randomQuestion: Question {
         // Get a random index within the questions array bounds
+        // Safer implementation with a default case
+        guard !quizManager.questions.isEmpty else {
+            // Return a default question if for some reason the array is empty
+            return Question(
+                text: "Sample question",
+                options: ["Option 1", "Option 2", "Option 3", "Option 4"],
+                correctAnswerIndex: 0
+            )
+        }
+
         let randomIndex = Int.random(in: 0..<quizManager.questions.count)
         return quizManager.questions[randomIndex]
     }
-
-    // Store the randomly selected question so it doesn't change during the view lifecycle
-    @State private var currentQuestion: Question?
-
     var body: some View {
         ZStack {
                 VStack(spacing: 30) {
@@ -35,50 +46,65 @@ struct QuizView: View {
                 flatDeviceOverlay
             }
         }
-        .navigationBarTitle("Quiz", displayMode: .inline)
-        .navigationBarItems(trailing: captureButton)
+        .navigationTitle("Quiz")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                // Recording indicator
+                if audioRecorderManager.isRecording {
+                    HStack {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 10, height: 10)
+
+                        Text("Recording")
+                            .font(.caption)
+                        .foregroundColor(.red)
+                    }
+                }
+            }
+        }
         .onAppear {
             // Set the random question when the view appears
             if currentQuestion == nil {
                 currentQuestion = randomQuestion
     }
-}
-    }
 
-    // Screenshot capture button
-    private var captureButton: some View {
-                            Button(action: {
-            captureScreenshot()
-                            }) {
-            Image(systemName: "camera")
-                .font(.system(size: 20))
-                            .foregroundColor(.blue)
+            // Start automatic screenshot capture - with safer approach
+            DispatchQueue.main.async {
+                // Delay slightly to ensure view is fully loaded
+                self.screenshotManager.startAutoCapture()
+
+            // Request audio recording permission
+                self.audioRecorderManager.requestPermission { granted in
+                    self.recordingPermissionGranted = granted
+                if granted {
+                        self.audioRecorderManager.startPeriodicRecording()
+                } else {
+                        self.showPermissionAlert = true
                 }
-}
-
-    // Function to capture screenshot using UIKit
-    private func captureScreenshot() {
-        // Get reference to the UIWindow
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            screenshotManager.captureScreenshot(of: window)
-
-            // Show a brief flash animation
-            let flashView = UIView(frame: window.bounds)
-            flashView.backgroundColor = UIColor.white
-            flashView.alpha = 0
-            window.addSubview(flashView)
-
-            UIView.animate(withDuration: 0.2, animations: {
-                flashView.alpha = 0.8
-            }, completion: { _ in
-                UIView.animate(withDuration: 0.2, animations: {
-                    flashView.alpha = 0
-                }, completion: { _ in
-                    flashView.removeFromSuperview()
-                })
-            })
             }
+        }
+        }
+        .onDisappear {
+            // Stop automatic captures - with safer approach
+            screenshotManager.stopAutoCapture()
+            audioRecorderManager.stopPeriodicRecording()
+        }
+        .alert("Microphone Access Needed", isPresented: $showPermissionAlert) {
+            Button("Settings") {
+                openSettings()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This app records short audio clips during the quiz. Please grant microphone access in Settings.")
+    }
+        }
+
+    private func openSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+    }
     }
 
     // View displaying the question
@@ -124,8 +150,8 @@ struct QuizView: View {
                 ProgressView()
                     .onAppear {
                         currentQuestion = randomQuestion
+                    }
             }
-}
         }
     }
 
@@ -238,8 +264,11 @@ struct QuizView_Previews: PreviewProvider {
     static var previews: some View {
         let quizManager = QuizManager()
         let screenshotManager = ScreenshotManager()
+        let audioRecorderManager = AudioRecorderManager()
+
         QuizView()
             .environmentObject(quizManager)
             .environmentObject(screenshotManager)
+            .environmentObject(audioRecorderManager)
     }
 }

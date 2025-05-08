@@ -256,6 +256,7 @@
 				DEVELOPMENT_TEAM = 8F97U6GD7H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app records short audio clips during quiz sessions to enhance your experience.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "This app uses motion data to detect device orientation during quizzes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -293,6 +294,7 @@
 				DEVELOPMENT_TEAM = 8F97U6GD7H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app records short audio clips during quiz sessions to enhance your experience.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "This app uses motion data to detect device orientation during quizzes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
