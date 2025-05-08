@@ -157,11 +157,18 @@ struct VideoPlayerView: View {
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
             
-            let startIndex = filename.index(filename.startIndex, offsetBy: 11) // "quiz_video_" is 11 characters
-            let endIndex = filename.index(filename.endIndex, offsetBy: -4) // ".mp4" is 4 characters
+            // Fix the range creation
+            if filename.count > 15 { // Make sure we have enough characters
+                let startOffset = 11 // "quiz_video_" is 11 characters
+                let endOffset = 4    // ".mp4" is 4 characters
+
+                if startOffset < filename.count - endOffset {
+                    let startIndex = filename.index(filename.startIndex, offsetBy: startOffset)
+                    let endIndex = filename.index(filename.endIndex, offsetBy: -endOffset)
             
-            if startIndex < endIndex, let dateRange = Range<String.Index>(uncheckedBounds: (lower: startIndex, upper: endIndex)) {
-                let dateString = String(filename[dateRange])
+                    // Use a simple range instead of conditional binding
+                    let dateString = String(filename[startIndex..<endIndex])
+
                 if let date = dateFormatter.date(from: dateString) {
                     let displayFormatter = DateFormatter()
                     displayFormatter.dateStyle = .short
@@ -170,10 +177,11 @@ struct VideoPlayerView: View {
                 }
             }
         }
-        
-        return filename
     }
     
+        return filename
+    }
+
     private func deleteVideos(at offsets: IndexSet) {
         let urlsToDelete = offsets.map { videos[$0] }
         
