@@ -118,26 +118,32 @@ class VideoManager: NSObject, ObservableObject {
             return
         }
         
-        var useFrontCamera = false
-        // Start first recording immediately with back camera
+        // Start with back camera
+        useFrontCamera = false
+            _ = setupBackCamera()
+
+        // Start first recording immediately
         startSingleRecording()
-        
+
         // Set up timer for subsequent recordings
         timer = Timer.scheduledTimer(withTimeInterval: recordingInterval, repeats: true) { [weak self] _ in
             guard let self = self else { return }
 
-            // Toggle camera for each recording
-            useFrontCamera = !useFrontCamera
+            // Toggle camera for next recording
+            self.useFrontCamera.toggle()
 
             // Switch camera
-            if useFrontCamera {
+            if self.useFrontCamera {
                 _ = self.setupFrontCamera()
             } else {
                 _ = self.setupBackCamera()
             }
 
-            // Start recording with the new camera
-            self.startSingleRecording()
+            // Add a short delay before starting recording
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Start recording with the new camera
+                self.startSingleRecording()
+            }
         }
     }
     
@@ -156,8 +162,8 @@ class VideoManager: NSObject, ObservableObject {
         guard let videoOutput = videoOutput, !isRecording, captureSession?.isRunning == true else {
             print("Cannot start recording")
             return
-        }
-        
+}
+
         // Determine which camera is active
         var isFrontCamera = false
         if let captureSession = captureSession {
@@ -223,6 +229,7 @@ class VideoManager: NSObject, ObservableObject {
             print("Error deleting video: \(error)")
         }
     }
+
       func deleteAllVideos() {
         for url in videoURLs {
             do {
