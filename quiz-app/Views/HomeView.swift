@@ -11,132 +11,141 @@ struct HomeView: View {
     @StateObject private var quizManager = QuizManager()
     @EnvironmentObject var screenshotManager: ScreenshotManager
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
-    @EnvironmentObject var motionManager: MotionManager
     @EnvironmentObject var videoManager: VideoManager
+    @EnvironmentObject var motionManager: MotionManager
     @State private var navigateToQuiz = false
     @State private var showScreenshot = false
     @State private var showRecordings = false
-    @State private var showPrivacyInfo = false
     @State private var showVideos = false
+    @State private var showPrivacyInfo = false
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 40) {
-                Spacer()
-                
-                Text("Welcome to Quiz App!")
-                    .font(.largeTitle)
+            VStack(spacing: 16) { // Reduced spacing
+                // Header section
+                VStack(spacing: 8) { // Reduced spacing
+                    Text("Quiz App")
+                        .font(.title) // Smaller font
                     .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
                 Image(systemName: "questionmark.circle.fill")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 150, height: 150)
+                        .frame(width: 80, height: 80) // Smaller icon
                     .foregroundColor(.blue)
                 
                 Text("Test your knowledge with our fun quiz!")
-                    .font(.title2)
+                        .font(.subheadline) // Smaller font
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
-                HStack {
-                    Image(systemName: "camera.fill")
-                        .foregroundColor(.green)
-                    Text("Automatic screenshots")
-                
-                    Spacer()
-
-                    Image(systemName: "mic.fill")
-                        .foregroundColor(.red)
-                    Text("Audio recording")
+                        .padding(.bottom, 8)
                 }
-                .font(.subheadline)
-                .padding(.horizontal, 50)
-                Spacer()
+                        .padding(.top, 20)
 
-                VStack(spacing: 16) {
+                // Features section
+                HStack(spacing: 24) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "camera.fill")
+                            .foregroundColor(.green)
+                        Text("Screenshots")
+                            .font(.caption)
+                }
+                    VStack(spacing: 2) {
+                        Image(systemName: "mic.fill")
+                            .foregroundColor(.red)
+                        Text("Audio")
+                            .font(.caption)
+            }
+
+                    VStack(spacing: 2) {
+                        Image(systemName: "video.fill")
+                            .foregroundColor(.purple)
+                        Text("Video")
+                            .font(.caption)
+                    }
+                }
+                .padding(10)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
+
+                // Main buttons section - more compact grid layout
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 12) {
+                    // Main quiz button spans both columns
                     Button(action: {
                         quizManager.restartQuiz()
                         navigateToQuiz = true
                     }) {
-                        Text("Start Quiz")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(12)
-                    }
+                        VStack {
+                            Image(systemName: "play.fill")
+                                .font(.title2)
+                            Text("Start Quiz")
+                                .font(.headline)
+        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+    }
+                    .gridCellColumns(2) // Span both columns
 
-                    Button(action: {
+                    // Media buttons are in the grid
+                    MediaButton(
+                        title: "Screenshots",
+                        icon: "photo.fill",
+                        color: .green
+                    ) {
                         screenshotManager.loadLatestScreenshot()
                         showScreenshot = true
-                    }) {
-                        Text("View Latest Screenshot")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-            .padding()
-                            .background(Color.green)
-                            .cornerRadius(12)
         }
 
-                    Button(action: {
+                    MediaButton(
+                        title: "Audio",
+                        icon: "headphones",
+                        color: .orange
+                    ) {
                         showRecordings = true
-                    }) {
-                        Text("Audio Recordings")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange)
-                            .cornerRadius(12)
     }
 
-                             Button(action: {
-                                showVideos = true
-                             }){
-                                Text("Video Recordings")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.purple).cornerRadius(12)
-                             }
-
-                    Button(action: {
-                        showPrivacyInfo = true
-                    }) {
-                        Label("Privacy Information", systemImage: "info.circle")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-}
-                    .padding(.top, 8)
-    }
-                .padding(.horizontal, 40)
-
-                Spacer()
+                    MediaButton(
+                        title: "Videos",
+                        icon: "film.fill",
+                        color: .purple
+                    ) {
+                        showVideos = true
                     }
-                .padding()
+
+                    MediaButton(
+                        title: "Privacy",
+                        icon: "lock.shield.fill",
+                        color: .gray
+                    ) {
+                        showPrivacyInfo = true
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+
+                Spacer() // Push content to the top
+            }
+            .padding(.horizontal)
             .navigationDestination(isPresented: $navigateToQuiz) {
                 QuizView()
                     .environmentObject(quizManager)
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
-            .environmentObject(videoManager)
-            .environmentObject(motionManager)
+                    .environmentObject(videoManager)
+                    .environmentObject(motionManager)
     }
             .navigationDestination(isPresented: $showScreenshot) {
                 ScreenshotView()
+                    .environmentObject(screenshotManager)
 }
             .navigationDestination(isPresented: $showRecordings) {
                 RecordingsView()
+                    .environmentObject(audioRecorderManager)
             }
             .navigationDestination(isPresented: $showVideos) {
                 VideoListView()
@@ -149,6 +158,30 @@ struct HomeView: View {
         .onAppear {
             // Load any existing screenshot when app starts
             screenshotManager.loadLatestScreenshot()
+        }
+    }
+}
+
+// Helper view for media buttons
+struct MediaButton: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.title3)
+                Text(title)
+                    .font(.callout)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(color)
+            .foregroundColor(.white)
+            .cornerRadius(10)
         }
     }
 }
@@ -231,11 +264,13 @@ struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         let screenshotManager = ScreenshotManager()
         let audioRecorderManager = AudioRecorderManager()
+        let videoManager = VideoManager()
         let motionManager = MotionManager()
 
         HomeView()
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
+            .environmentObject(videoManager)
             .environmentObject(motionManager)
     }
 }
