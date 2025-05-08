@@ -5,68 +5,85 @@ struct VideoListView: View {
     @EnvironmentObject var videoManager: VideoManager
     @State private var selectedVideo: URL?
     @Environment(\.dismiss) var dismiss
+    @State private var editMode: EditMode = .inactive
     
     var body: some View {
-        VStack {
-            Text("Video Recordings")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding()
-            
-            if videoManager.videoURLs.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "video.slash")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 80, height: 80)
-                        .foregroundColor(.gray)
-                    
-                    Text("No videos recorded yet")
-                        .font(.title2)
-                        .foregroundColor(.gray)
-                }
-                .frame(maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(videoManager.videoURLs, id: \.self) { url in
-                        Button(action: {
-                            selectedVideo = url
-                            playVideo(url)
-                        }) {
-                            HStack {
-                                Text(formatDate(from: url))
-                                    .font(.headline)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "play.circle.fill")
-                                    .foregroundColor(.blue)
-                                    .font(.title3)
+        NavigationStack {
+            VStack {
+                if videoManager.videoURLs.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "video.slash")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 80, height: 80)
+                            .foregroundColor(.gray)
+                        
+                        Text("No videos recorded yet")
+                            .font(.title2)
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(videoManager.videoURLs, id: \.self) { url in
+                            Button(action: {
+                                if editMode == .inactive {
+                                    selectedVideo = url
+                                    playVideo(url)
+                                }
+                            }) {
+                                HStack {
+                                    Text(formatDate(from: url))
+                                        .font(.headline)
+                                    
+                                    Spacer()
+                                    
+                                    if editMode == .inactive {
+                                        Image(systemName: "play.circle.fill")
+                                            .foregroundColor(.blue)
+                                            .font(.title3)
+                                    }
+                                }
+                                .padding(.vertical, 8)
                             }
-                            .padding(.vertical, 8)
+                        }
+                        .onDelete { indexSet in
+                            let urlsToDelete = indexSet.map { videoManager.videoURLs[$0] }
+                            for url in urlsToDelete {
+                                videoManager.deleteVideo(at: url)
+                            }
                         }
                     }
-                    .onDelete { indexSet in
-                        let urlsToDelete = indexSet.map { videoManager.videoURLs[$0] }
-                        for url in urlsToDelete {
-                            videoManager.deleteVideo(at: url)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            EditButton()
                         }
+                    }
+                    .environment(\.editMode, $editMode)
+                }
+                
+                if !videoManager.videoURLs.isEmpty {
+                    Button(action: {
+                        // Confirmation alert for deleting all videos
+                        // Implement in the next step
+                    }) {
+                        Label("Delete All Videos", systemImage: "trash")
+                            .foregroundColor(.red)
+                            .padding(.vertical, 10)
+                    }
+                    .padding(.bottom, 10)
+                }
+            }
+            .navigationTitle("Video Recordings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") {
+                        dismiss()
                     }
                 }
             }
-            
-            Button("Close") {
-                dismiss()
-            }
-            .font(.headline)
-            .foregroundColor(.white)
-            .padding()
-            .frame(width: 200)
-            .background(Color.blue)
-            .cornerRadius(10)
-            .padding(.bottom, 20)
         }
-        .padding()
     }
     
     private func playVideo(_ url: URL) {
@@ -89,8 +106,22 @@ struct VideoListView: View {
             }
         }
     }
+    // Add this function to your VideoManager class
+    func deleteAllVideos() {
+        for url in videoURLs {
+            do {
+                try FileManager.default.removeItem(at: url)
+            } catch {
+                print("Error deleting video: \(error)")
+            }
+        }
+        videoURLs.removeAll()
+        print("All videos deleted")
+    }
+
     
     private func formatDate(from url: URL) -> String {
+        // Existing date formatting code
         let filename = url.lastPathComponent
         
         if filename.hasPrefix("video_") && filename.hasSuffix(".mp4") {
@@ -116,3 +147,4 @@ struct VideoListView: View {
         return filename
     }
 }
+

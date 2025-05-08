@@ -1,102 +1,112 @@
-//
-//  RecordingsView.swift
-//  quiz-app
-//
-//  Created by Stephen Cheng on 5/8/25.
-//
-
 import SwiftUI
 import AVFoundation
-
-// Coordinator class to handle AVAudioPlayerDelegate conformance
-class AudioPlayerCoordinator: NSObject, AVAudioPlayerDelegate {
-    var onFinishPlaying: () -> Void
-
-    init(onFinishPlaying: @escaping () -> Void) {
-        self.onFinishPlaying = onFinishPlaying
-        super.init()
-    }
-
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        onFinishPlaying()
-    }
-}
 
 struct RecordingsView: View {
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
     @Environment(\.presentationMode) var presentationMode
     @State private var recordings: [URL] = []
+    @State private var currentlyPlaying: URL?
     @State private var audioPlayer: AVAudioPlayer?
-    @State private var playingURL: URL?
-    @State private var coordinator: AudioPlayerCoordinator?
-
+    @State private var editMode: EditMode = .inactive
+    @State private var showDeleteConfirmation = false
+    
     var body: some View {
-        VStack {
-            Text("Quiz Audio Recordings")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding()
-            
-            if recordings.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "waveform")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 100, height: 100)
-                        .foregroundColor(.gray)
-                    
-                    Text("No recordings available")
-                        .font(.title2)
-                        .foregroundColor(.gray)
-                }
-                .padding()
-                .frame(maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(recordings, id: \.self) { url in
-                        HStack {
-                            Text(formattedDate(from: url))
-                                .font(.headline)
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                playRecording(url: url)
-                            }) {
-                                Image(systemName: playingURL == url ? "stop.circle" : "play.circle")
-                                    .font(.title2)
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .padding(.vertical, 8)
+        NavigationStack {
+            VStack {
+                if recordings.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "waveform")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 80, height: 80)
+                            .foregroundColor(.gray)
+                        
+                        Text("No audio recordings available")
+                            .font(.title2)
+                            .foregroundColor(.gray)
                     }
-                    .onDelete(perform: deleteRecordings)
+                    .padding()
+                    .frame(maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(recordings, id: \.self) { url in
+                            HStack {
+                                Text(formattedDate(from: url))
+                                    .font(.headline)
+                                
+                                Spacer()
+                                
+                                if editMode == .inactive {
+                                    Button(action: {
+                                        if currentlyPlaying == url {
+                                            stopPlayback()
+                                        } else {
+                                            playRecording(url)
+                                        }
+                                    }) {
+                                        Image(systemName: currentlyPlaying == url ? "stop.circle.fill" : "play.circle.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        .onDelete(perform: deleteRecordings)
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            EditButton()
+                        }
+                    }
+                    .environment(\.editMode, $editMode)
+                    
+                    if !recordings.isEmpty {
+                        Button(action: {
+                            showDeleteConfirmation = true
+                        }) {
+                            Label("Delete All Recordings", systemImage: "trash")
+                                .foregroundColor(.red)
+                                .padding(.vertical, 10)
+                        }
+                        .padding(.bottom, 10)
+                        .alert("Delete All Recordings?", isPresented: $showDeleteConfirmation) {
+                            Button("Delete All", role: .destructive) {
+                                deleteAllRecordings()
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This will permanently delete all audio recordings. This action cannot be undone.")
+                        }
+                    }
                 }
             }
-            
-            Button(action: {
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                Text("Close")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(width: 200)
-                    .background(Color.blue)
-                    .cornerRadius(10)
-                    .padding(.vertical, 20)
+            .navigationTitle("Audio Recordings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") {
+                        stopPlayback()
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
             }
-        }
-        .onAppear {
-            refreshRecordings()
+            .onAppear {
+                refreshRecordings()
+            }
+            .onDisappear {
+                stopPlayback()
+            }
         }
     }
     
     private func refreshRecordings() {
+        // Get all m4a files from documents directory
         recordings = audioRecorderManager.getRecordings().sorted(by: { $0.lastPathComponent > $1.lastPathComponent })
     }
     
     private func formattedDate(from url: URL) -> String {
+        // Your existing date formatting logic
         let filename = url.lastPathComponent
         
         // Extract timestamp from filename (quiz_audio_1234567890.m4a)
@@ -115,34 +125,23 @@ struct RecordingsView: View {
         return filename
     }
     
-    private func playRecording(url: URL) {
-        if playingURL == url {
-            // Stop playing if this is the currently playing URL
-            audioPlayer?.stop()
-            playingURL = nil
-            return
-        }
+    private func playRecording(_ url: URL) {
+        stopPlayback()
         
-        // Play the selected recording
         do {
-            audioPlayer?.stop() // Stop any playing audio
-            
             audioPlayer = try AVAudioPlayer(contentsOf: url)
-
-            // Create coordinator to handle playback completion
-            coordinator = AudioPlayerCoordinator {
-                // This will be called when playback finishes
-                DispatchQueue.main.async {
-                    self.playingURL = nil
-                }
-            }
-
-            audioPlayer?.delegate = coordinator
+            audioPlayer?.prepareToPlay()
             audioPlayer?.play()
-            playingURL = url
+            currentlyPlaying = url
         } catch {
-            print("Error playing audio: \(error)")
+            print("Error playing recording: \(error)")
         }
+    }
+    
+    private func stopPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        currentlyPlaying = nil
     }
     
     private func deleteRecordings(at offsets: IndexSet) {
@@ -155,5 +154,11 @@ struct RecordingsView: View {
         // Update our recordings list
         refreshRecordings()
     }
+    
+    private func deleteAllRecordings() {
+        for url in recordings {
+            try? FileManager.default.removeItem(at: url)
+        }
+        recordings.removeAll()
+    }
 }
-
