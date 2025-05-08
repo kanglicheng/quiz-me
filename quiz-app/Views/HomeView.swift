@@ -12,7 +12,7 @@ struct HomeView: View {
     @EnvironmentObject var screenshotManager: ScreenshotManager
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
     @EnvironmentObject var motionManager: MotionManager
-    @EnvironmentObject var videoRecorderManager: VideoRecorderManager
+    @EnvironmentObject var videoManager: VideoManager
     @State private var navigateToQuiz = false
     @State private var showScreenshot = false
     @State private var showRecordings = false
@@ -129,7 +129,7 @@ struct HomeView: View {
                     .environmentObject(quizManager)
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
-            .environmentObject(videoRecorderManager)
+            .environmentObject(videoManager)
             .environmentObject(motionManager)
     }
             .navigationDestination(isPresented: $showScreenshot) {
