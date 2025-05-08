@@ -98,18 +98,17 @@ struct HomeView: View {
                             .cornerRadius(12)
     }
 
-                    Button(action: {
-                        showVideos = true
-                    }) {
-                        Text("Video Recordings")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.purple)
-                            .cornerRadius(12)
-                    }
+                             Button(action: {
+                                showVideos = true
+                             }){
+                                Text("Video Recordings")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.purple).cornerRadius(12)
+                             }
 
                     Button(action: {
                         showPrivacyInfo = true
@@ -140,8 +139,8 @@ struct HomeView: View {
                 RecordingsView()
             }
             .navigationDestination(isPresented: $showVideos) {
-                VideoPlayerView()
-                    .environmentObject(audioRecorderManager)
+                VideoListView()
+                    .environmentObject(videoManager)
             }
             .sheet(isPresented: $showPrivacyInfo) {
                 PrivacyInfoView()

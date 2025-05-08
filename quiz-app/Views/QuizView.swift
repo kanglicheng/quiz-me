@@ -4,7 +4,7 @@ struct QuizView: View {
     @EnvironmentObject var quizManager: QuizManager
     @EnvironmentObject var screenshotManager: ScreenshotManager
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
-    @EnvironmentObject var videoRecorderManager: VideoRecorderManager
+    @EnvironmentObject var videoManager: VideoManager
     @EnvironmentObject var motionManager: MotionManager
     @Environment(\.presentationMode) var presentationMode
     
@@ -67,7 +67,7 @@ struct QuizView: View {
                     }
                     
                     // Video recording indicator
-                    if videoRecorderManager.isRecording {
+                    if videoManager.isRecording {
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(Color.red)
@@ -101,9 +101,9 @@ struct QuizView: View {
             }
             
             // Request video recording permission
-            videoRecorderManager.requestPermission { granted in
+            videoManager.requestPermission { granted in
                 if granted {
-                    videoRecorderManager.startPeriodicRecording()
+                    videoManager.startPeriodicRecording()
                 } else {
                     permissionAlertType = "video"
                     showPermissionAlert = true
@@ -114,7 +114,7 @@ struct QuizView: View {
             // Stop all recordings when leaving the view
             screenshotManager.stopAutoCapture()
             audioRecorderManager.stopPeriodicRecording()
-            videoRecorderManager.stopPeriodicRecording()
+            videoManager.stopPeriodicRecording()
         }
         .alert("Permission Required", isPresented: $showPermissionAlert) {
             Button("Settings") {
@@ -296,14 +296,14 @@ struct QuizView_Previews: PreviewProvider {
         let quizManager = QuizManager()
         let screenshotManager = ScreenshotManager()
         let audioRecorderManager = AudioRecorderManager()
-        let videoRecorderManager = VideoRecorderManager()
+        let videoManager = VideoManager()
         let motionManager = MotionManager()
         
         QuizView()
             .environmentObject(quizManager)
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
-            .environmentObject(videoRecorderManager)
+            .environmentObject(videoManager)
             .environmentObject(motionManager)
     }
 }
