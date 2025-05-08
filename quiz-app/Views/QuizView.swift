@@ -1,16 +1,10 @@
-//
-//  QuizView.swift
-//  quiz-app
-//
-//  Created by Stephen Cheng on 5/7/25.
-//
-
 import SwiftUI
 
 struct QuizView: View {
     @EnvironmentObject var quizManager: QuizManager
     @EnvironmentObject var screenshotManager: ScreenshotManager
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
+    @EnvironmentObject var videoRecorderManager: VideoRecorderManager
     @EnvironmentObject var motionManager: MotionManager
     @Environment(\.presentationMode) var presentationMode
     
@@ -19,35 +13,35 @@ struct QuizView: View {
     @State private var isCorrect = false
     @State private var recordingPermissionGranted = false
     @State private var showPermissionAlert = false
+    @State private var permissionAlertType = ""
     @State private var currentQuestion: Question?
-
+    
     // Select a random question from the quiz manager
     private var randomQuestion: Question {
-        // Get a random index within the questions array bounds
-        // Safer implementation with a default case
         guard !quizManager.questions.isEmpty else {
-            // Return a default question if for some reason the array is empty
+            // Return a default question if the array is empty
             return Question(
                 text: "Sample question",
                 options: ["Option 1", "Option 2", "Option 3", "Option 4"],
                 correctAnswerIndex: 0
             )
         }
-
+        
         let randomIndex = Int.random(in: 0..<quizManager.questions.count)
         return quizManager.questions[randomIndex]
     }
+    
     var body: some View {
         ZStack {
-                VStack(spacing: 30) {
-            if showResult {
-                resultView
-            } else {
-                questionView
+            VStack(spacing: 30) {
+                if showResult {
+                    resultView
+                } else {
+                    questionView
+                }
             }
-        }
-                                    .padding()
-
+            .padding()
+            
             // Overlay when device is flat
             if motionManager.isDeviceFlat {
                 flatDeviceOverlay
@@ -57,16 +51,32 @@ struct QuizView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                // Recording indicator
-                if audioRecorderManager.isRecording {
-                    HStack {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 10, height: 10)
-
-                        Text("Recording")
-                            .font(.caption)
-                        .foregroundColor(.red)
+                // Indicators for recording activity
+                HStack(spacing: 12) {
+                    // Audio recording indicator
+                    if audioRecorderManager.isRecording {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                            
+                            Text("Audio")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    
+                    // Video recording indicator
+                    if videoRecorderManager.isRecording {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                            
+                            Text("Video")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
                     }
                 }
             }
@@ -75,59 +85,73 @@ struct QuizView: View {
             // Set the random question when the view appears
             if currentQuestion == nil {
                 currentQuestion = randomQuestion
-    }
-
-            // Start automatic screenshot capture - with safer approach
-            DispatchQueue.main.async {
-                // Delay slightly to ensure view is fully loaded
-                self.screenshotManager.startAutoCapture()
-
+            }
+            
+            // Start automatic screenshot capture
+            screenshotManager.startAutoCapture()
+            
             // Request audio recording permission
-                self.audioRecorderManager.requestPermission { granted in
-                    self.recordingPermissionGranted = granted
+            audioRecorderManager.requestPermission { granted in
                 if granted {
-                        self.audioRecorderManager.startPeriodicRecording()
+                    audioRecorderManager.startPeriodicRecording()
                 } else {
-                        self.showPermissionAlert = true
+                    permissionAlertType = "audio"
+                    showPermissionAlert = true
+                }
+            }
+            
+            // Request video recording permission
+            videoRecorderManager.requestPermission { granted in
+                if granted {
+                    videoRecorderManager.startPeriodicRecording()
+                } else {
+                    permissionAlertType = "video"
+                    showPermissionAlert = true
                 }
             }
         }
-        }
         .onDisappear {
-            // Stop automatic captures - with safer approach
+            // Stop all recordings when leaving the view
             screenshotManager.stopAutoCapture()
             audioRecorderManager.stopPeriodicRecording()
+            videoRecorderManager.stopPeriodicRecording()
         }
-        .alert("Microphone Access Needed", isPresented: $showPermissionAlert) {
+        .alert("Permission Required", isPresented: $showPermissionAlert) {
             Button("Settings") {
                 openSettings()
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Continue Anyway", role: .cancel) { }
         } message: {
-            Text("This app records short audio clips during the quiz. Please grant microphone access in Settings.")
-    }
+            if permissionAlertType == "audio" {
+                Text("This app records audio during quizzes. Please grant microphone access in Settings to enable this feature.")
+            } else if permissionAlertType == "video" {
+                Text("This app captures video during quizzes. Please grant camera access in Settings to enable this feature.")
+            } else {
+                Text("This app requires additional permissions to function properly.")
+            }
         }
-
+    }
+    
     private func openSettings() {
         if let url = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(url)
+        }
     }
-    }
-
+    
     // View displaying the question
     private var questionView: some View {
         Group {
             if let question = currentQuestion {
                 VStack(spacing: 30) {
                     Spacer()
-
+                    
                     // Question text
                     Text(question.text)
                         .font(.title)
                         .fontWeight(.semibold)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
-
+                    
                     Spacer()
                     
                     // Answer options
@@ -145,10 +169,10 @@ struct QuizView: View {
                                     .frame(maxWidth: .infinity)
                                     .background(Color.blue)
                                     .cornerRadius(10)
+                            }
+                            .disabled(motionManager.isDeviceFlat)
+                        }
                     }
-            .disabled(motionManager.isDeviceFlat)
-        }
-    }
                     .padding(.horizontal)
                     
                     Spacer()
@@ -161,13 +185,13 @@ struct QuizView: View {
             }
         }
     }
-
+    
     // Overlay displayed when device is flat
     private var flatDeviceOverlay: some View {
         ZStack {
             Color.black.opacity(0.85)
                 .ignoresSafeArea()
-
+            
             VStack(spacing: 25) {
                 Image(systemName: "iphone.gen3")
                     .resizable()
@@ -175,12 +199,12 @@ struct QuizView: View {
                     .frame(width: 100, height: 100)
                     .rotationEffect(.degrees(90))
                     .foregroundColor(.white)
-
+                
                 Text("Quiz Paused")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-
+                
                 Text("Please lift your device to continue")
                     .font(.title2)
                     .multilineTextAlignment(.center)
@@ -191,12 +215,12 @@ struct QuizView: View {
         .transition(.opacity)
         .animation(.easeInOut, value: motionManager.isDeviceFlat)
     }
-
+    
     // View displaying the result
     private var resultView: some View {
         VStack(spacing: 30) {
             Spacer()
-
+            
             if isCorrect {
                 // Correct answer result
                 VStack(spacing: 20) {
@@ -205,12 +229,12 @@ struct QuizView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 100, height: 100)
                         .foregroundColor(.green)
-
+                    
                     Text("You're smart!")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.green)
-
+                    
                     Text("Test Complete")
                         .font(.title2)
                         .padding(.top)
@@ -223,18 +247,18 @@ struct QuizView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 100, height: 100)
                         .foregroundColor(.red)
-
+                    
                     Text("You tried, but that's not correct")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.red)
                         .multilineTextAlignment(.center)
-
+                    
                     if let question = currentQuestion {
                         Text("The correct answer is:")
                             .font(.headline)
                             .padding(.top)
-
+                        
                         Text(question.options[question.correctAnswerIndex])
                             .font(.title3)
                             .fontWeight(.semibold)
@@ -243,9 +267,9 @@ struct QuizView: View {
                     }
                 }
             }
-
+            
             Spacer()
-
+            
             // Return to home button
             Button(action: {
                 presentationMode.wrappedValue.dismiss()
@@ -261,7 +285,7 @@ struct QuizView: View {
             }
             .padding(.horizontal, 40)
             .disabled(motionManager.isDeviceFlat)
-
+            
             Spacer()
         }
     }
@@ -272,12 +296,14 @@ struct QuizView_Previews: PreviewProvider {
         let quizManager = QuizManager()
         let screenshotManager = ScreenshotManager()
         let audioRecorderManager = AudioRecorderManager()
-
+        let videoRecorderManager = VideoRecorderManager()
+        let motionManager = MotionManager()
+        
         QuizView()
             .environmentObject(quizManager)
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
+            .environmentObject(videoRecorderManager)
+            .environmentObject(motionManager)
     }
 }
-
-

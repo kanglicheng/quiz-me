@@ -56,6 +56,30 @@ struct VideoPlayerView: View {
                 }
             }
             
+            #if DEBUG
+            Button("Debug Files") {
+                let fileManager = FileManager.default
+                let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                
+                do {
+                    let fileURLs = try fileManager.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil)
+                    print("Files in documents directory:")
+                    for (index, url) in fileURLs.enumerated() {
+                        do {
+                            let attributes = try fileManager.attributesOfItem(atPath: url.path)
+                            let fileSize = attributes[.size] as? UInt64 ?? 0
+                            print("\(index+1): \(url.lastPathComponent) - \(fileSize) bytes")
+                        } catch {
+                            print("\(index+1): \(url.lastPathComponent) - Error getting size")
+                        }
+                    }
+                } catch {
+                    print("Error listing files: \(error)")
+                }
+            }
+            .padding()
+            #endif
+            
             Button(action: {
                 presentationMode.wrappedValue.dismiss()
             }) {
@@ -117,7 +141,6 @@ struct VideoPlayerView: View {
         }
     }
     
-    // Rest of your code remains the same...
     private func refreshVideos() {
         videos = videoRecorderManager.getVideos().sorted(by: { $0.lastPathComponent > $1.lastPathComponent })
         print("Found \(videos.count) videos")
@@ -127,10 +150,38 @@ struct VideoPlayerView: View {
     }
     
     private func formattedDate(from url: URL) -> String {
-        // Existing implementation...
+        let filename = url.lastPathComponent
+        
+        // Parse the formatted date from the filename
+        if filename.hasPrefix("quiz_video_") {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+            
+            let startIndex = filename.index(filename.startIndex, offsetBy: 11) // "quiz_video_" is 11 characters
+            let endIndex = filename.index(filename.endIndex, offsetBy: -4) // ".mp4" is 4 characters
+            
+            if startIndex < endIndex, let dateRange = Range<String.Index>(uncheckedBounds: (lower: startIndex, upper: endIndex)) {
+                let dateString = String(filename[dateRange])
+                if let date = dateFormatter.date(from: dateString) {
+                    let displayFormatter = DateFormatter()
+                    displayFormatter.dateStyle = .short
+                    displayFormatter.timeStyle = .medium
+                    return displayFormatter.string(from: date)
+                }
+            }
+        }
+        
+        return filename
     }
     
     private func deleteVideos(at offsets: IndexSet) {
-        // Existing implementation...
+        let urlsToDelete = offsets.map { videos[$0] }
+        
+        for url in urlsToDelete {
+            try? FileManager.default.removeItem(at: url)
+        }
+        
+        // Update our videos list
+        refreshVideos()
     }
 }

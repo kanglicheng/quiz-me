@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var showScreenshot = false
     @State private var showRecordings = false
     @State private var showPrivacyInfo = false
+    @State private var showVideos = false
     
     var body: some View {
         NavigationStack {
@@ -97,6 +98,19 @@ struct HomeView: View {
     }
 
                     Button(action: {
+                        showVideos = true
+                    }) {
+                        Text("Video Recordings")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.purple)
+                            .cornerRadius(12)
+                    }
+
+                    Button(action: {
                         showPrivacyInfo = true
                     }) {
                         Label("Privacy Information", systemImage: "info.circle")
@@ -108,8 +122,8 @@ struct HomeView: View {
                 .padding(.horizontal, 40)
 
                 Spacer()
-            }
-            .padding()
+                    }
+                .padding()
             .navigationDestination(isPresented: $navigateToQuiz) {
                 QuizView()
                     .environmentObject(quizManager)
@@ -122,6 +136,10 @@ struct HomeView: View {
 }
             .navigationDestination(isPresented: $showRecordings) {
                 RecordingsView()
+            }
+            .navigationDestination(isPresented: $showVideos) {
+                VideoPlayerView()
+                    .environmentObject(audioRecorderManager)
             }
             .sheet(isPresented: $showPrivacyInfo) {
                 PrivacyInfoView()
