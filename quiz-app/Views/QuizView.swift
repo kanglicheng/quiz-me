@@ -100,35 +100,34 @@ struct QuizView: View {
                 }
             }
             
-            // Request video recording permission
+            // Request video recording permission with alternating cameras
             videoManager.requestPermission { granted in
                 if granted {
-                    videoManager.startAlternatingCameraRecordings()
-                } else {
-                    permissionAlertType = "video"
-                    showPermissionAlert = true
-                }
-            }
+            // Enable alternating cameras (back then front)
+            videoManager.setAlternatingCameras(enabled: true)
+            // Start the periodic recording
+            videoManager.startPeriodicRecording()
+        } else {
+            permissionAlertType = "video"
+            showPermissionAlert = true
         }
+    }
+}
         .onDisappear {
             // Stop all recordings when leaving the view
             screenshotManager.stopAutoCapture()
             audioRecorderManager.stopPeriodicRecording()
             videoManager.stopPeriodicRecording()
         }
-        .alert("Permission Required", isPresented: $showPermissionAlert) {
-            Button("Settings") {
-                openSettings()
-            }
-            Button("Continue Anyway", role: .cancel) { }
-        } message: {
-            if permissionAlertType == "audio" {
-                Text("This app records audio during quizzes. Please grant microphone access in Settings to enable this feature.")
-            } else if permissionAlertType == "video" {
-                Text("This app captures video during quizzes. Please grant camera access in Settings to enable this feature.")
-            } else {
-                Text("This app requires additional permissions to function properly.")
-            }
+        .alert(isPresented: $showPermissionAlert) {
+            Alert(
+                title: Text("Permission Required"),
+                message: Text(permissionAlertType == "audio"
+                           ? "This app requires microphone access to record audio during quizzes."
+                           : "This app requires camera access to record video during quizzes."),
+                primaryButton: .default(Text("Settings"), action: openSettings),
+                secondaryButton: .cancel(Text("Continue Anyway"))
+            )
         }
     }
     
