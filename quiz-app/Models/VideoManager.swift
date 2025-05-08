@@ -196,6 +196,17 @@ class VideoManager: NSObject, ObservableObject {
             print("Error deleting video: \(error)")
         }
     }
+      func deleteAllVideos() {
+        for url in videoURLs {
+            do {
+                try FileManager.default.removeItem(at: url)
+            } catch {
+                print("Error deleting video: \(error)")
+            }
+        }
+        videoURLs.removeAll()
+        print("All videos deleted")
+    }
     
     deinit {
         stopPeriodicRecording()

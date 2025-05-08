@@ -6,6 +6,7 @@ struct VideoListView: View {
     @State private var selectedVideo: URL?
     @Environment(\.dismiss) var dismiss
     @State private var editMode: EditMode = .inactive
+    @State private var showDeleteConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -64,14 +65,22 @@ struct VideoListView: View {
                 
                 if !videoManager.videoURLs.isEmpty {
                     Button(action: {
-                        // Confirmation alert for deleting all videos
-                        // Implement in the next step
+                        // Show confirmation alert
+                        showDeleteConfirmation = true
                     }) {
                         Label("Delete All Videos", systemImage: "trash")
                             .foregroundColor(.red)
                             .padding(.vertical, 10)
                     }
                     .padding(.bottom, 10)
+                    .alert("Delete All Videos?", isPresented: $showDeleteConfirmation) {
+                        Button("Delete All", role: .destructive) {
+                            videoManager.deleteAllVideos() // Call the method on VideoManager
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This will permanently delete all videos. This action cannot be undone.")
+                    }
                 }
             }
             .navigationTitle("Video Recordings")
@@ -106,20 +115,6 @@ struct VideoListView: View {
             }
         }
     }
-    // Add this function to your VideoManager class
-    func deleteAllVideos() {
-        for url in videoURLs {
-            do {
-                try FileManager.default.removeItem(at: url)
-            } catch {
-                print("Error deleting video: \(error)")
-            }
-        }
-        videoURLs.removeAll()
-        print("All videos deleted")
-    }
-
-    
     private func formatDate(from url: URL) -> String {
         // Existing date formatting code
         let filename = url.lastPathComponent
@@ -147,4 +142,3 @@ struct VideoListView: View {
         return filename
     }
 }
-
