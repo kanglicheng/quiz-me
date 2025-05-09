@@ -151,7 +151,7 @@ struct HomeView: View {
             }
             .navigationDestination(isPresented: $showVideos) {
                 VideoListView()
-                    .environmentObject(videoManager)
+                    .environmentObject(multiCamManager)
             }
             .sheet(isPresented: $showPrivacyInfo) {
                 PrivacyInfoView()
@@ -293,3 +293,5 @@ struct HomeView_Previews: PreviewProvider {
             .environmentObject(motionManager)
     }
 }
+
+

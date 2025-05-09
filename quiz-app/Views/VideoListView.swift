@@ -2,7 +2,7 @@ import AVKit
 import SwiftUI
 
 struct VideoListView: View {
-    @EnvironmentObject var videoManager: VideoManager
+    @EnvironmentObject var multiCamManager: MultiCamManager
     @State private var selectedVideo: URL?
     @Environment(\.dismiss) var dismiss
     @State private var editMode: EditMode = .inactive
@@ -11,7 +11,7 @@ struct VideoListView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                if videoManager.videoURLs.isEmpty {
+                if multiCamManager.videoURLs.isEmpty {
                     VStack(spacing: 20) {
                         Image(systemName: "video.slash")
                             .resizable()
@@ -26,7 +26,7 @@ struct VideoListView: View {
                     .frame(maxHeight: .infinity)
                 } else {
                     List {
-                        ForEach(videoManager.videoURLs, id: \.self) { url in
+                        ForEach(multiCamManager.videoURLs, id: \.self) { url in
                             Button(action: {
                                 if editMode == .inactive {
                                     selectedVideo = url
@@ -50,10 +50,10 @@ struct VideoListView: View {
                         }
                         .onDelete { indexSet in
                             let urlsToDelete = indexSet.map {
-                                videoManager.videoURLs[$0]
+                                multiCamManager.videoURLs[$0]
                             }
                             for url in urlsToDelete {
-                                videoManager.deleteVideo(at: url)
+                                multiCamManager.deleteVideo(at: url)
                             }
                         }
                     }
@@ -65,7 +65,7 @@ struct VideoListView: View {
                     .environment(\.editMode, $editMode)
                 }
 
-                if !videoManager.videoURLs.isEmpty {
+                if !multiCamManager.videoURLs.isEmpty {
                     Button(action: {
                         // Show confirmation alert
                         showDeleteConfirmation = true
@@ -80,7 +80,7 @@ struct VideoListView: View {
                         isPresented: $showDeleteConfirmation
                     ) {
                         Button("Delete All", role: .destructive) {
-                            videoManager.deleteAllVideos()  // Call the method on VideoManager
+                            multiCamManager.deleteAllVideos()  // Call the method on VideoManager
                         }
                         Button("Cancel", role: .cancel) {}
                     } message: {

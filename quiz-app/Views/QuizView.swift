@@ -4,7 +4,7 @@ struct QuizView: View {
     @EnvironmentObject var quizManager: QuizManager
     @EnvironmentObject var screenshotManager: ScreenshotManager
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
-    @EnvironmentObject var videoManager: VideoManager
+    @EnvironmentObject var multiCamManager: MultiCamManager
     @EnvironmentObject var motionManager: MotionManager
     @Environment(\.presentationMode) var presentationMode
 
@@ -67,7 +67,7 @@ struct QuizView: View {
                     }
 
                     // Video recording indicator
-                    if videoManager.isRecording {
+                    if multiCamManager.isRecording {
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(Color.red)
@@ -100,13 +100,10 @@ struct QuizView: View {
                 }
             }
 
-            // Request video recording permission with alternating cameras
-            videoManager.requestPermission { granted in
+            // Request video recording permission
+            multiCamManager.requestPermission { granted in
                 if granted {
-                    // Enable alternating cameras (back then front)
-                    videoManager.setAlternatingCameras(enabled: true)
-                    // Start the periodic recording
-                    videoManager.startPeriodicRecording()
+                    multiCamManager.startPeriodicRecording()
                 } else {
                     permissionAlertType = "video"
                     showPermissionAlert = true
@@ -117,7 +114,7 @@ struct QuizView: View {
             // Stop all recordings when leaving the view
             screenshotManager.stopAutoCapture()
             audioRecorderManager.stopPeriodicRecording()
-            videoManager.stopPeriodicRecording()
+            multiCamManager.stopPeriodicRecording()
         }
         .alert(isPresented: $showPermissionAlert) {
             Alert(
@@ -299,14 +296,14 @@ struct QuizView_Previews: PreviewProvider {
         let quizManager = QuizManager()
         let screenshotManager = ScreenshotManager()
         let audioRecorderManager = AudioRecorderManager()
-        let videoManager = VideoManager()
+        let multiCamManager = MultiCamManager()
         let motionManager = MotionManager()
 
         QuizView()
             .environmentObject(quizManager)
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
-            .environmentObject(videoManager)
+            .environmentObject(multiCamManager)
             .environmentObject(motionManager)
     }
 }
