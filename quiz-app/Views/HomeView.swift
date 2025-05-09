@@ -11,8 +11,6 @@ struct HomeView: View {
     @StateObject private var quizManager = QuizManager()
     @EnvironmentObject var screenshotManager: ScreenshotManager
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
-    @EnvironmentObject var videoManager: VideoManager
-    @EnvironmentObject var motionManager: MotionManager
     @EnvironmentObject var multiCamManager: MultiCamManager
     @State private var navigateToQuiz = false
     @State private var showScreenshot = false
@@ -139,8 +137,7 @@ struct HomeView: View {
                     .environmentObject(quizManager)
                     .environmentObject(screenshotManager)
                     .environmentObject(audioRecorderManager)
-                    .environmentObject(videoManager)
-                    .environmentObject(motionManager)
+                    .environmentObject(multiCamManager)
             }
             .navigationDestination(isPresented: $showScreenshot) {
                 ScreenshotView()
@@ -284,15 +281,10 @@ struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         let screenshotManager = ScreenshotManager()
         let audioRecorderManager = AudioRecorderManager()
-        let videoManager = VideoManager()
-        let motionManager = MotionManager()
-
+        let multiCamManager = MultiCamManager()
         HomeView()
             .environmentObject(screenshotManager)
             .environmentObject(audioRecorderManager)
-            .environmentObject(videoManager)
-            .environmentObject(motionManager)
+            .environmentObject(multiCamManager)
     }
 }
-
-
