@@ -13,6 +13,7 @@ struct HomeView: View {
     @EnvironmentObject var audioRecorderManager: AudioRecorderManager
     @EnvironmentObject var videoManager: VideoManager
     @EnvironmentObject var motionManager: MotionManager
+    @EnvironmentObject var multiCamManager: MultiCamManager
     @State private var navigateToQuiz = false
     @State private var showScreenshot = false
     @State private var showRecordings = false
