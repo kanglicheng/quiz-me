@@ -18,28 +18,28 @@ struct HomeView: View {
     @State private var showRecordings = false
     @State private var showVideos = false
     @State private var showPrivacyInfo = false
-    
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) { // Reduced spacing
+            VStack(spacing: 16) {  // Reduced spacing
                 // Header section
-                VStack(spacing: 8) { // Reduced spacing
+                VStack(spacing: 8) {  // Reduced spacing
                     Text("Quiz App")
-                        .font(.title) // Smaller font
-                    .fontWeight(.bold)
-                Image(systemName: "questionmark.circle.fill")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                        .frame(width: 80, height: 80) // Smaller icon
-                    .foregroundColor(.blue)
-                
-                Text("Test your knowledge with our fun quiz!")
-                        .font(.subheadline) // Smaller font
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                        .font(.title)  // Smaller font
+                        .fontWeight(.bold)
+                    Image(systemName: "questionmark.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 80, height: 80)  // Smaller icon
+                        .foregroundColor(.blue)
+
+                    Text("Test your knowledge with our fun quiz!")
+                        .font(.subheadline)  // Smaller font
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                         .padding(.bottom, 8)
                 }
-                        .padding(.top, 20)
+                .padding(.top, 20)
 
                 // Features section
                 HStack(spacing: 24) {
@@ -48,13 +48,13 @@ struct HomeView: View {
                             .foregroundColor(.green)
                         Text("Screenshots")
                             .font(.caption)
-                }
+                    }
                     VStack(spacing: 2) {
                         Image(systemName: "mic.fill")
                             .foregroundColor(.red)
                         Text("Audio")
                             .font(.caption)
-            }
+                    }
 
                     VStack(spacing: 2) {
                         Image(systemName: "video.fill")
@@ -68,10 +68,12 @@ struct HomeView: View {
                 .cornerRadius(8)
 
                 // Main buttons section - more compact grid layout
-                LazyVGrid(columns: [
-                    GridItem(.flexible()),
-                    GridItem(.flexible())
-                ], spacing: 12) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                    ], spacing: 12
+                ) {
                     // Main quiz button spans both columns
                     Button(action: {
                         quizManager.restartQuiz()
@@ -82,14 +84,14 @@ struct HomeView: View {
                                 .font(.title2)
                             Text("Start Quiz")
                                 .font(.headline)
-        }
+                        }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                         .background(Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(10)
-    }
-                    .gridCellColumns(2) // Span both columns
+                    }
+                    .gridCellColumns(2)  // Span both columns
 
                     // Media buttons are in the grid
                     MediaButton(
@@ -99,7 +101,7 @@ struct HomeView: View {
                     ) {
                         screenshotManager.loadLatestScreenshot()
                         showScreenshot = true
-        }
+                    }
 
                     MediaButton(
                         title: "Audio",
@@ -107,7 +109,7 @@ struct HomeView: View {
                         color: .orange
                     ) {
                         showRecordings = true
-    }
+                    }
 
                     MediaButton(
                         title: "Videos",
@@ -128,21 +130,21 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
 
-                Spacer() // Push content to the top
+                Spacer()  // Push content to the top
             }
             .padding(.horizontal)
             .navigationDestination(isPresented: $navigateToQuiz) {
                 QuizView()
                     .environmentObject(quizManager)
-            .environmentObject(screenshotManager)
-            .environmentObject(audioRecorderManager)
+                    .environmentObject(screenshotManager)
+                    .environmentObject(audioRecorderManager)
                     .environmentObject(videoManager)
                     .environmentObject(motionManager)
-    }
+            }
             .navigationDestination(isPresented: $showScreenshot) {
                 ScreenshotView()
                     .environmentObject(screenshotManager)
-}
+            }
             .navigationDestination(isPresented: $showRecordings) {
                 RecordingsView()
                     .environmentObject(audioRecorderManager)
@@ -200,8 +202,10 @@ struct PrivacyInfoView: View {
                             .fontWeight(.bold)
                             .padding(.bottom, 5)
 
-                        Text("This app captures data during your quiz session to enhance your experience. Here's what you should know:")
-                            .font(.body)
+                        Text(
+                            "This app captures data during your quiz session to enhance your experience. Here's what you should know:"
+                        )
+                        .font(.body)
                     }
 
                     Divider()
@@ -211,10 +215,15 @@ struct PrivacyInfoView: View {
                             .font(.title2)
                             .fontWeight(.bold)
 
-                        Text("• Screenshots are taken every 15 seconds while the quiz is active")
-                        Text("• A subtle flash effect indicates when a screenshot is captured")
+                        Text(
+                            "• Screenshots are taken every 15 seconds while the quiz is active"
+                        )
+                        Text(
+                            "• A subtle flash effect indicates when a screenshot is captured"
+                        )
                         Text("• Screenshots are stored only within the app")
-                        Text("• Screenshots pause when the device is lying flat")
+                        Text(
+                            "• Screenshots pause when the device is lying flat")
                     }
 
                     Divider()
@@ -224,9 +233,15 @@ struct PrivacyInfoView: View {
                             .font(.title2)
                             .fontWeight(.bold)
 
-                        Text("• 5-second audio clips are recorded every 30 seconds")
-                        Text("• A red indicator appears in the navigation bar during recording")
-                        Text("• Microphone permission is required and can be revoked in Settings")
+                        Text(
+                            "• 5-second audio clips are recorded every 30 seconds"
+                        )
+                        Text(
+                            "• A red indicator appears in the navigation bar during recording"
+                        )
+                        Text(
+                            "• Microphone permission is required and can be revoked in Settings"
+                        )
                         Text("• Recordings are stored only within the app")
                     }
 
@@ -238,13 +253,17 @@ struct PrivacyInfoView: View {
                             .fontWeight(.bold)
 
                         Text("• The app detects when your device is lying flat")
-                        Text("• Quiz and recordings pause when the device is flat")
+                        Text(
+                            "• Quiz and recordings pause when the device is flat"
+                        )
                         Text("• No motion data is stored or transmitted")
                     }
 
-                    Text("All data captured is stored locally on your device and is not shared with third parties.")
-                        .font(.headline)
-                        .padding(.top, 20)
+                    Text(
+                        "All data captured is stored locally on your device and is not shared with third parties."
+                    )
+                    .font(.headline)
+                    .padding(.top, 20)
                 }
                 .padding()
             }
